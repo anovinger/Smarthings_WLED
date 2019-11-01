@@ -1,0 +1,179 @@
+metadata {
+	definition (name: "WLED", namespace: "smartthings", author: "Andrew Novinger") {
+		capability "Switch Level"
+		capability "Actuator"
+		capability "Color Control"
+		capability "Color Temperature"
+		capability "Switch"
+		capability "Refresh"
+		capability "Sensor"
+		capability "Health Check"
+		capability "Light"
+        
+        command "setAdjustedColor"
+        command "rain"
+        command "setBrightness"
+        command "setSpeed"
+        command "setIntensity"
+	}
+
+	// simulator metadata
+	simulator {
+	}
+    
+    // preference
+ 	preferences {
+		input "ip", "text", title: "WLED IP", description: "IP Address in form 192.168.1.226", required: true, displayDuringSetup: true
+		input "port", "text", title: "WLED Port", description: "port in form of 80", required: true, displayDuringSetup: true
+	}
+
+	// UI tile definitions
+	tiles (scale: 2){
+		multiAttributeTile(name:"rich-control", type: "lighting", width: 6, height: 4, canChangeIcon: true){
+			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
+            	attributeState "off", label:'Off', action:"switch.on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"on"
+				attributeState "on", label:'On', action:"switch.off", icon:"st.switches.light.on", backgroundColor:"#00A0DC", nextState:"off"
+			}
+			tileAttribute ("device.level", key: "SLIDER_CONTROL") {
+				attributeState "level", action:"setLevel"
+			}
+			tileAttribute ("device.color", key: "COLOR_CONTROL") {
+				attributeState "color", action:"setAdjustedColor"
+			}
+		}
+        standardTile("Effects", "Effects", width: 5, height: 1, decoration: "flat") {
+        		state "Effects", label: 'Effects', backgroundColor: "#ffffff" 
+        	}
+        standardTile("Blank", "Blank", width: 1, height: 1, decoration: "flat") {
+        		state "Blank", label: '', backgroundColor: "#ffffff" 
+        	}
+        standardTile("Rain", "device.switch", width: 2, height: 1, decoration: "flat") {
+        		state "On", label: 'Rain', action:"rain", icon: "st.switches.switch.off", backgroundColor: "#ffffff" 
+        	}
+        controlTile("FXSpeed", "device.level", "slider", height: 3, width: 2) {
+               state "switch level.level", label: 'FXSpeed', action:"setSpeed"
+            }
+        controlTile("FXIntensity", "device.level", "slider", height: 3, width: 2) {
+               state "switch level.level", label: 'FXIntensity', action:"setIntensity"
+            }
+		main (["rich-control"])
+		details (["rich-control", "Effects", "Blank", "Rain", "FXSpeed", "FXIntensity"])
+	}
+}
+
+private getHostAddress() {
+    def ip = settings.ip
+    def port = settings.port
+    
+    log.trace "Using ip: ${ip} and port: ${port}"
+    return ip + ":" + port
+}
+
+def parse(String description) {
+}
+
+def on() {
+    sendEvent(name: "switch", value: "on", isStateChange: true)
+    log.trace "Command to WLED: /win&T=1"
+	new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&T=1",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+)
+}
+
+def off() {
+    sendEvent(name: "switch", value: "off", isStateChange: true)
+    log.trace "Command to WLED: /win&T=0"
+	new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&T=0",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+)
+}
+
+def rain() {
+    log.trace "Command to WLED: /win&FX=43&SX=130&IX=221"
+	new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&FX=43&SX=130&IX=221",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+)
+}
+
+def setAdjustedColor(color) {
+    state.SavedColor = value
+    sendEvent(name: "switch", value: "on", isStateChange: true)
+    def redvalue
+    def greenvalue
+    def bluevalue
+	color.each { key, value ->
+		switch (key) {
+			case "red":
+                redvalue = "${value}"
+                break
+            case "green":
+                greenvalue = "${value}"
+				break
+			case "blue":
+                bluevalue = "${value}"
+				break
+		}
+    }
+    log.trace "Command to WLED: /win&FX=0&R=${redvalue}&G=${greenvalue}&B=${bluevalue}"
+    new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&FX=0&R=${redvalue}&G=${greenvalue}&B=${bluevalue}",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+    )
+}
+
+def setLevel(value) {
+  state.SavedLevel = value  
+  sendEvent(name: "switch", value: "on", isStateChange: true)
+  sendEvent(name: "level", value: state.SavedLevel, isStateChange: true)
+  def valueaux = value as Integer
+  def level = Math.round(valueaux * 255) / 100
+  log.trace "Command to WLED: /win&A=${level}"
+  new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&A=${level}",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+    )
+}
+
+def setSpeed(value) {
+  def valueaux = value as Integer
+  def level = Math.round(valueaux * 255) / 100
+  log.trace "Command to WLED: /win&SX=${level}"
+  new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&SX=${level}",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+    )
+}
+
+def setIntensity(value) {
+  def valueaux = value as Integer
+  def level = Math.round(valueaux * 255) / 100
+  log.trace "Command to WLED: /win&IX=${level}"
+  new physicalgraph.device.HubAction(
+    method: "GET",
+    path: "/win&IX=${level}",
+    headers: [
+        HOST: "${ip}:${port}"
+    ],
+    )
+}
