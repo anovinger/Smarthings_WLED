@@ -108,15 +108,14 @@ def setLevel(value) {
     if (value > 0) { 
       sendEvent(name: "switch", value: "on", isStateChange: true)
       sendEvent(name: "level", value: state.SavedLevel, isStateChange: true)
-      log.trace "Command to WLED: /win&A=${level}"
-      return sendGetRequest("/win&A=${level}")
     } else {
       sendEvent(name: "switch", value: "off", isStateChange: true)
       sendEvent(name: "level", value: state.SavedLevel, isStateChange: true)
-      log.trace "Command to WLED: /win&A=${level}"
-      return sendGetRequest("/win&A=${level}")
     }
+    log.trace "Command to WLED: /win&A=${level}"
+    return sendGetRequest("/win&A=${level}")
 }
+
 
 def setSpeed(value) {
   def valueaux = value as Integer
