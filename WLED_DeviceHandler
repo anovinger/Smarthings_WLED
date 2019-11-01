@@ -61,50 +61,21 @@ metadata {
 	}
 }
 
-private getHostAddress() {
-    def ip = settings.ip
-    def port = settings.port
-    
-    log.trace "Using ip: ${ip} and port: ${port}"
-    return ip + ":" + port
-}
-
-def parse(String description) {
-}
-
 def on() {
     sendEvent(name: "switch", value: "on", isStateChange: true)
     log.trace "Command to WLED: /win&T=1"
-	new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&T=1",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-)
+    return sendGetRequest("/win&T=1")
 }
 
 def off() {
     sendEvent(name: "switch", value: "off", isStateChange: true)
     log.trace "Command to WLED: /win&T=0"
-	new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&T=0",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-)
+    return sendGetRequest("/win&T=0")
 }
 
 def rain() {
     log.trace "Command to WLED: /win&FX=43&SX=130&IX=221"
-	new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&FX=43&SX=130&IX=221",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-)
+    return sendGetRequest("/win&FX=43&SX=130&IX=221")
 }
 
 def setAdjustedColor(color) {
@@ -127,53 +98,49 @@ def setAdjustedColor(color) {
 		}
     }
     log.trace "Command to WLED: /win&FX=0&R=${redvalue}&G=${greenvalue}&B=${bluevalue}"
-    new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&FX=0&R=${redvalue}&G=${greenvalue}&B=${bluevalue}",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-    )
+    return sendGetRequest("/win&FX=0&R=${redvalue}&G=${greenvalue}&B=${bluevalue}")
 }
 
 def setLevel(value) {
-  state.SavedLevel = value  
-  sendEvent(name: "switch", value: "on", isStateChange: true)
-  sendEvent(name: "level", value: state.SavedLevel, isStateChange: true)
-  def valueaux = value as Integer
-  def level = Math.round(valueaux * 255) / 100
-  log.trace "Command to WLED: /win&A=${level}"
-  new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&A=${level}",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-    )
+    state.SavedLevel = value
+    def valueaux = value as Integer
+    def level = Math.round(valueaux * 255) / 100
+    if (value > 0) { 
+      sendEvent(name: "switch", value: "on", isStateChange: true)
+      sendEvent(name: "level", value: state.SavedLevel, isStateChange: true)
+      log.trace "Command to WLED: /win&A=${level}"
+      return sendGetRequest("/win&A=${level}")
+    } else {
+      sendEvent(name: "switch", value: "off", isStateChange: true)
+      sendEvent(name: "level", value: state.SavedLevel, isStateChange: true)
+      log.trace "Command to WLED: /win&A=${level}"
+      return sendGetRequest("/win&A=${level}")
+    }
 }
 
 def setSpeed(value) {
   def valueaux = value as Integer
   def level = Math.round(valueaux * 255) / 100
   log.trace "Command to WLED: /win&SX=${level}"
-  new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&SX=${level}",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-    )
+  return sendGetRequest("/win&SX=${level}")
 }
 
 def setIntensity(value) {
   def valueaux = value as Integer
   def level = Math.round(valueaux * 255) / 100
   log.trace "Command to WLED: /win&IX=${level}"
-  new physicalgraph.device.HubAction(
-    method: "GET",
-    path: "/win&IX=${level}",
-    headers: [
-        HOST: "${ip}:${port}"
-    ],
-    )
+  return sendGetRequest("/win&IX=${level}")
 }
+
+private sendGetRequest(String url) {
+	log.debug("${internal_ip}:${internal_port}${url}")
+    def result = new physicalgraph.device.HubAction(
+      method: "GET",
+      path: "${url}",
+      headers: [
+        HOST: "${ip}:${port}" 
+      ]
+    )
+    return result;
+    log.trace "${result}"
+ }
